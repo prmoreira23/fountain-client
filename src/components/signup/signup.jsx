@@ -52,7 +52,8 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-function SignUp() {
+function SignUp(props) {
+  const { history } = props;
   const classes = useStyles();
   const [values, setValues] = useState({ name: '', email: '', password: '', password_confirmation: '', role: 'applicant', errors: {} })
 
@@ -69,7 +70,7 @@ function SignUp() {
     event.preventDefault();
     setValues({ ...values, errors: {} });
     createUser(values).then((user) => {
-      console.log(user);
+      history.push("/");
     }).catch(error => {
       const { errors } = error.response.data.data.attributes;
       setValues({ ...values, errors });

@@ -1,41 +1,24 @@
-import React from 'react';
-import AppBar from '@material-ui/core/AppBar';
+import React, { useEffect, useState } from 'react';
 import Button from '@material-ui/core/Button';
-import Card from '@material-ui/core/Card';
-import CardActions from '@material-ui/core/CardActions';
-import CardContent from '@material-ui/core/CardContent';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import Grid from '@material-ui/core/Grid';
-import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import { makeStyles } from '@material-ui/core/styles';
 import Container from '@material-ui/core/Container';
 import Link from "@material-ui/core/Link";
 import { Link as RouterLink } from 'react-router-dom';
+import { connect } from 'react-redux';
 
 import Copyright from '../shared/copyright';
+import { getLastestJobOpenings } from '../../services/job-opening-services';
+import AppBar from '../shared/app-bar';
+import { isUserLoggedIn } from '../../utils/auth';
+import JobCard from './job-card';
 
 const useStyles = makeStyles(theme => ({
-  '@global': {
-    ul: {
-      margin: 0,
-      padding: 0,
-    },
-    li: {
-      listStyle: 'none',
-    },
-  },
-  toolbar: {
-    flexWrap: 'wrap',
-  },
-  toolbarTitle: {
-    flexGrow: 1,
-  },
-  link: {
+  buttonLink: {
     margin: theme.spacing(1, 1.5),
-  },
-  icon: {
-    marginRight: theme.spacing(2),
+    textDecoration: 'none !important',
   },
   heroContent: {
     backgroundColor: theme.palette.background.paper,
@@ -62,69 +45,84 @@ const useStyles = makeStyles(theme => ({
   footer: {
     backgroundColor: theme.palette.background.paper,
     padding: theme.spacing(6),
+    marginTop: 'auto',
   },
 }));
 
-const jobs = [
-  { id: "1", title: "Java Developer", description: "Best Java Developer in the U.S. Best Java Developer in the U.S.", employer: "Amazon.com" },
-  { id: "2", title: "Java Developer", description: "Best Java Developer in the U.S.", employer: "Amazon.com" },
-  { id: "3", title: "Java Developer", description: "Best Java Developer in the U.S.", employer: "Amazon.com" },
-  { id: "4", title: "Java Developer", description: "Best Java Developer in the U.S.", employer: "Amazon.com" },
-  { id: "5", title: "Java Developer", description: "Best Java Developer in the U.S.", employer: "Amazon.com" },
-  { id: "6", title: "Java Developer", description: "Best Java Developer in the U.S.", employer: "Amazon.com" },
-  { id: "7", title: "Java Developer", description: "Best Java Developer in the U.S.", employer: "Amazon.com" },
-  { id: "8", title: "Java Developer", description: "Best Java Developer in the U.S.", employer: "Amazon.com" },
-  { id: "9", title: "Java Developer", description: "Best Java Developer in the U.S.", employer: "Amazon.com" },
-];
+const mapStateToProps = state => {
+  return { ...state };
+};
 
-export default function Home() {
+function Home(props) {
   const classes = useStyles();
+  const [jobOpenings, setJobOpenings] = useState([]);
+  const userLoggedIn = isUserLoggedIn();
+  const { auth: { user } } = props;
+  const { role } = user ? user.data.attributes : {};
+
+  const formatJobOpening = (jobOpening) => {
+    const { id, attributes } = jobOpening;
+    const { title, description, employer, applied } = attributes;
+    return { id, title, description, employer, applied };
+  }
+
+  const onSuccess = (id) => {
+    const i = jobOpenings.findIndex(job => job.id === id);
+    const newJobOpenings = [...jobOpenings];
+    newJobOpenings[i].applied = true;
+    setJobOpenings(newJobOpenings);
+  }
+
+  useEffect(() => {
+    getLastestJobOpenings().then(jobOpenings => {
+      const { data } = jobOpenings;
+      const jobs = data.map(job => formatJobOpening(job));
+      setJobOpenings(jobs);
+    });
+  }, [userLoggedIn]);
+
+  let heroText = "We're the only job board you'll ever need. Sign in or sign up and start enjoying curated jobs in the best companies in the U.S. and Canada.";
+
+  if(userLoggedIn) {
+    heroText = role === "applicant" ?
+    "We're the only job board you'll ever need. You're ready to start enjoying curated jobs in the best companies in the U.S. and Canada." :
+    "We're the only job board you'll ever need. You're ready to find the best candidates to fill in your open positions.";
+  }
 
   return (
     <React.Fragment>
       <CssBaseline />
-      <AppBar position="sticky" color="default" elevation={0}>
-        <Toolbar className={classes.toolbar}>
-          <Typography variant="h6" color="inherit" noWrap className={classes.toolbarTitle}>
-            Jooby.com
-          </Typography>
-          <nav>
-            <Link variant="button" component={RouterLink} color="textPrimary" to="/jobs" className={classes.link}>
-              Job Openings
-            </Link>
-            <Link variant="button" component={RouterLink} color="textPrimary" to="/sign-up" className={classes.link}>
-              Sign up
-            </Link>
-          </nav>
-          <Button href="/sign-in" color="primary" variant="outlined" className={classes.link}>
-            Login
-          </Button>
-        </Toolbar>
-      </AppBar>
+      <AppBar />
       <main>
         {/* Hero unit */}
         <div className={classes.heroContent}>
           <Container maxWidth="sm">
             <Typography component="h1" variant="h2" align="center" color="textPrimary" gutterBottom>
-              Job Board
+              {userLoggedIn ? "Welcome Back!" : "Job Board"}
             </Typography>
             <Typography variant="h5" align="center" color="textSecondary" paragraph>
-              We're the only job board you'll ever need. Sign in or sign up and start enjoying curated jobs in the best companies in the U.S. and Canada.
+              { heroText }
             </Typography>
-            <div className={classes.heroButtons}>
+            {!userLoggedIn && (
+              <div className={classes.heroButtons}>
               <Grid container spacing={2} justify="center">
                 <Grid item>
-                  <Button href="/sign-up" variant="contained" color="primary">
-                    Create a new account
-                  </Button>
+                  <Link variant="button" component={RouterLink} color="textPrimary" to="/sign-up" className={classes.buttonLink}>
+                    <Button variant="contained" color="primary">
+                      Create a new account
+                    </Button>
+                  </Link>
                 </Grid>
                 <Grid item>
-                  <Button href="/sign-in" variant="outlined" color="primary">
-                    Sign in
-                  </Button>
+                  <Link variant="button" component={RouterLink} color="textPrimary" to="/sign-in" className={classes.buttonLink}>
+                    <Button variant="outlined" color="primary">
+                      Sign in
+                    </Button>
+                  </Link>
                 </Grid>
               </Grid>
-            </div>
+            </div>)
+          }
           </Container>
         </div>
         <Container className={classes.cardGrid} maxWidth="md">
@@ -132,32 +130,14 @@ export default function Home() {
           <Grid container spacing={4}>
             <Grid item xs={12}>
               <Typography variant="h4" align="center" color="textSecondary" gutterBottom>
-                Latest Jobs
+                { role === "employer" ? "Your Latest Added Jobs" : "Latest Added Jobs" }
               </Typography>
             </Grid>
-            {jobs.map(job => (
-              <Grid item key={job.id} xs={12} sm={6} md={4}>
-                <Card className={classes.card}>
-                  <CardContent className={classes.cardContent}>
-                    <Typography gutterBottom variant="h5" component="h2">
-                      {job.title}
-                    </Typography>
-                    <Typography>
-                    {job.description}
-                    </Typography>
-                  </CardContent>
-                  <CardActions>
-                    <Button size="small" color="primary">
-                      View
-                    </Button>
-                    <Button size="small" color="primary">
-                      Apply
-                    </Button>
-                  </CardActions>
-                </Card>
-              </Grid>
+            {jobOpenings.map(job => (
+              <JobCard key={job.id} job={job} onSuccess={onSuccess} />
             ))}
           </Grid>
+
         </Container>
       </main>
       {/* Footer */}
@@ -174,3 +154,5 @@ export default function Home() {
     </React.Fragment>
   );
 }
+
+export default connect(mapStateToProps, null)(Home);

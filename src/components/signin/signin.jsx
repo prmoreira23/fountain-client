@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { connect } from 'react-redux';
 import { Link as RouterLink } from 'react-router-dom';
 import Avatar from "@material-ui/core/Avatar";
 import Button from "@material-ui/core/Button";
@@ -12,7 +13,18 @@ import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import AccountCircleIcon from "@material-ui/icons/AccountCircle";
 
+import { login } from '../../actions/authActions';
+import { storeToken } from '../../utils/auth';
 import Copyright from '../shared/copyright';
+import AuthAdapter from '../../services/auth-services';
+
+const mapDispatchToProps = dispatch => ({
+ loginAction: (auth) => dispatch(login(auth))
+});
+
+const mapStateToProps = state => {
+  return { ...state };
+};
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -47,7 +59,7 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-export default function SignInSide() {
+function SignInSide(props) {
   const classes = useStyles();
   const [values, setValues] = useState({ email: '', password: '', errors: {} })
 
@@ -56,6 +68,20 @@ export default function SignInSide() {
     setValues({...values, [name]: value});
   }
 
+  const handleLogin = e => {
+    e.preventDefault();
+    const loginParams = {...values};
+    delete loginParams.errors;
+
+    AuthAdapter.login(loginParams)
+      .then(auth => {
+        if (!auth.error) {
+          props.loginAction({ user: auth.user });
+          storeToken(auth.token);
+          props.history.push('/');
+        }
+      });
+  }
 
   return (
     <Grid container component="main" className={classes.root}>
@@ -109,6 +135,7 @@ export default function SignInSide() {
               variant="contained"
               color="primary"
               className={classes.submit}
+              onClick={handleLogin}
             >
               Sign In
             </Button>
@@ -127,4 +154,6 @@ export default function SignInSide() {
       </Grid>
     </Grid>
   );
-}
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(SignInSide);
